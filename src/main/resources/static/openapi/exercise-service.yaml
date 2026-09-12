@@ -84,7 +84,11 @@ components:
       additionalProperties: false
       required: [exerciseName, sets]
       properties:
-        exerciseName: { type: string, minLength: 1, maxLength: 120 }
+        exerciseName:
+          type: string
+          minLength: 1
+          maxLength: 120
+          pattern: '.*\S.*'
         loggedAt: { type: string, format: date-time }
         sets:
           type: array
