@@ -45,12 +45,10 @@ jobs:
         env:
           IMAGE: ghcr.io/experiencequality/xq-svc-exercice
           IMAGE_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
-        run: ./gradlew --no-daemon bootBuildImage --imageName="$IMAGE:sha-$IMAGE_SHA"
-      - name: Publish immutable and latest tags
-        env:
-          IMAGE: ghcr.io/experiencequality/xq-svc-exercice
-          IMAGE_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
         run: |
-          docker push "$IMAGE:sha-$IMAGE_SHA"
-          docker tag "$IMAGE:sha-$IMAGE_SHA" "$IMAGE:latest"
-          docker push "$IMAGE:latest"
+          docker buildx build \
+            --platform linux/amd64 \
+            --tag "$IMAGE:sha-$IMAGE_SHA" \
+            --tag "$IMAGE:latest" \
+            --push \
+            .

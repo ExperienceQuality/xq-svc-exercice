@@ -53,8 +53,10 @@ docker compose down --volumes --remove-orphans
 ## Render and Neon deployment
 
 GitHub Actions runs separate Build, Test, Publish, and Deploy workflows. Publish builds a Linux
-container image and publishes it to GHCR after successful main-branch Test, or for an explicit
-release tag. Deploy then triggers an image-backed Render service with the immutable `sha-<commit>` image tag. Configure the
+ container image with Dockerfile and publishes it to GHCR after successful main-branch Test, or
+ for an explicit release tag. Deploy then triggers an image-backed Render service with the immutable
+ `sha-<commit>` image tag. The image targets `linux/amd64` and uses bounded JVM memory for Render's
+ 512 MB plan. Configure the
 service health check as `/actuator/health/readiness`; the service binds to Render's `PORT` value
 and uses production profile settings when `SPRING_PROFILES_ACTIVE=production`.
 
