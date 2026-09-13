@@ -2,9 +2,9 @@ spring:
   application:
     name: exercise-service
   datasource:
-    url: jdbc:postgresql://localhost:5432/exercise_service
-    username: exercise_service
-    password: ${POSTGRES_PASSWORD:exercise_service_pw}
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/exercise_service}
+    username: ${SPRING_DATASOURCE_USERNAME:exercise_service}
+    password: ${SPRING_DATASOURCE_PASSWORD:${POSTGRES_PASSWORD:exercise_service_pw}}
   docker:
     compose:
       file: compose.yaml
@@ -20,6 +20,7 @@ spring:
 
 server:
   port: ${PORT:8080}
+  address: ${SERVER_ADDRESS:0.0.0.0}
 
 management:
   endpoints:
