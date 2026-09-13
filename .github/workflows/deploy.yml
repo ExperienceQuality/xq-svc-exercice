@@ -1,3 +1,4 @@
+# hub-stage: deploy
 name: Deploy
 
 on:

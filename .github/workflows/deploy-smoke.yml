@@ -1,3 +1,4 @@
+# hub-stage: verify
 name: Deployment Smoke Test
 
 on:
