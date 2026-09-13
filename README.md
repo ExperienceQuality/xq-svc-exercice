@@ -1,5 +1,9 @@
 # xq-svc-exercice
+[![Build](https://github.com/ExperienceQuality/xq-svc-exercice/actions/workflows/build.yml/badge.svg)](https://github.com/ExperienceQuality/xq-svc-exercice/actions/workflows/build.yml)
 [![Test](https://github.com/ExperienceQuality/xq-svc-exercice/actions/workflows/test.yml/badge.svg)](https://github.com/ExperienceQuality/xq-svc-exercice/actions/workflows/test.yml)
+[![Publish](https://github.com/ExperienceQuality/xq-svc-exercice/actions/workflows/publish.yml/badge.svg)](https://github.com/ExperienceQuality/xq-svc-exercice/actions/workflows/publish.yml)
+[![Deploy](https://github.com/ExperienceQuality/xq-svc-exercice/actions/workflows/deploy.yml/badge.svg)](https://github.com/ExperienceQuality/xq-svc-exercice/actions/workflows/deploy.yml)
+[![Deployment Smoke Test](https://github.com/ExperienceQuality/xq-svc-exercice/actions/workflows/deploy-smoke.yml/badge.svg)](https://github.com/ExperienceQuality/xq-svc-exercice/actions/workflows/deploy-smoke.yml)
 
 Spring Boot microservice and PostgreSQL database for a single-user exercise log book.
 
