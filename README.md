@@ -1,5 +1,5 @@
 # xq-svc-exercice
-[![CI](https://github.com/ExperienceQuality/xq-svc-exercice/actions/workflows/ci.yml/badge.svg)](https://github.com/ExperienceQuality/xq-svc-exercice/actions/workflows/ci.yml)
+[![Test](https://github.com/ExperienceQuality/xq-svc-exercice/actions/workflows/test.yml/badge.svg)](https://github.com/ExperienceQuality/xq-svc-exercice/actions/workflows/test.yml)
 
 Spring Boot microservice and PostgreSQL database for a single-user exercise log book.
 
@@ -52,8 +52,9 @@ docker compose down --volumes --remove-orphans
 
 ## Render and Neon deployment
 
-GitHub Actions builds a Linux container image and publishes it to GHCR. The deploy workflow then
-triggers an image-backed Render service with the immutable `sha-<commit>` image tag. Configure the
+GitHub Actions runs separate Build, Test, Publish, and Deploy workflows. Publish builds a Linux
+container image and publishes it to GHCR after successful main-branch Test, or for an explicit
+release tag. Deploy then triggers an image-backed Render service with the immutable `sha-<commit>` image tag. Configure the
 service health check as `/actuator/health/readiness`; the service binds to Render's `PORT` value
 and uses production profile settings when `SPRING_PROFILES_ACTIVE=production`.
 
