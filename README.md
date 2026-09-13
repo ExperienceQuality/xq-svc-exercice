@@ -1,5 +1,5 @@
 # xq-svc-exercice
-[![CI](https://github.com/ExperienceQuality/xq-svc-exercice/actions/workflows/ci.yml/badge.svg)](https://github.com/ExperienceQuality/xq-svc-exercice/actions/workflows/ci.yml)
+[![Test](https://github.com/ExperienceQuality/xq-svc-exercice/actions/workflows/test.yml/badge.svg)](https://github.com/ExperienceQuality/xq-svc-exercice/actions/workflows/test.yml)
 
 Spring Boot microservice and PostgreSQL database for a single-user exercise log book.
 
