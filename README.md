@@ -49,3 +49,47 @@ docker compose up -d --wait
 ./gradlew --no-daemon e2e
 docker compose down --volumes --remove-orphans
 ```
+
+## Render and Neon deployment
+
+GitHub Actions builds a Linux container image and publishes it to GHCR. The deploy workflow then
+triggers an image-backed Render service with the immutable `sha-<commit>` image tag. Configure the
+service health check as `/actuator/health/readiness`; the service binds to Render's `PORT` value
+and uses production profile settings when `SPRING_PROFILES_ACTIVE=production`.
+
+Create a Render workspace registry credential named `ghcr` with a GitHub token that has
+`read:packages` permission. Attach it to the image-backed service. Render does not automatically
+redeploy when a registry tag changes; the deploy hook in GitHub Actions triggers each image deploy.
+
+Use one Neon project and its protected `main` branch only. Configure these Render environment
+variables with the Neon `main` connection and runtime role; keep values in Render, never Git:
+
+```text
+SPRING_PROFILES_ACTIVE=production
+SPRING_DATASOURCE_URL=<Neon main pooled connection URL>
+SPRING_DATASOURCE_USERNAME=<runtime role>
+SPRING_DATASOURCE_PASSWORD=<runtime role password>
+DB_SCHEMA=fitness
+```
+
+Production uses a 30-second database connection timeout by default to tolerate Neon compute
+cold start. Override `DB_CONNECTION_TIMEOUT_MS` in Render only when measured startup behavior
+requires a different value.
+
+Flyway applies migrations from `src/main/resources/db/migration`. Validate migrations against
+local PostgreSQL in CI, then review production migration impact before deploying to Neon `main`.
+Never enable Flyway clean in production or edit an applied migration.
+
+Create GitHub environment `production`, restrict it to `main`, and set repository variable
+`RENDER_SERVICE_URL` to the Render service URL. The deployment smoke workflow checks liveness,
+readiness, and the read-only distinct-exercises endpoint. Run it only after Render deploys.
+
+Create repository secret `RENDER_DEPLOY_HOOK_URL` from the Render service Settings → Deploy Hook.
+The deploy workflow appends the immutable GHCR image tag to this hook. Keep the hook secret; it
+can trigger production deploys. [Render deploy hooks](https://render.com/docs/deploy-hooks)
+
+Build the deployment image locally with:
+
+```shell
+docker build -t xq-svc-exercise:test .
+```
