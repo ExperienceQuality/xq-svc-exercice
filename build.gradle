@@ -91,9 +91,8 @@ tasks.register('cucumberE2eTest', Test) {
 }
 
 tasks.register('e2e') {
-    description = 'Runs end-to-end tests against XQORB_BASE_URI.'
+    description = 'Runs Cucumber end-to-end scenarios against the configured service URI.'
     group = 'verification'
-    dependsOn tasks.named('e2eTest')
     dependsOn tasks.named('cucumberE2eTest')
 }
 
