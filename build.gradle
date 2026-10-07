@@ -52,7 +52,13 @@ dependencies {
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 
     e2eImplementation 'org.junit.jupiter:junit-jupiter-api'
-    e2eImplementation 'com.xq:jvm-test-kit:2.0.0'
+    e2eImplementation 'com.xq:jvm-test-kit:3.0.1'
+    e2eImplementation platform('io.cucumber:cucumber-bom:8.0.2')
+    e2eImplementation 'io.cucumber:cucumber-junit-platform-engine'
+    e2eImplementation 'io.cucumber:cucumber-spring'
+    e2eImplementation platform('org.springframework.boot:spring-boot-dependencies:4.1.1')
+    e2eImplementation 'org.springframework.boot:spring-boot-test'
+    e2eImplementation 'org.springframework:spring-test'
     e2eRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine'
     e2eRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
@@ -69,10 +75,26 @@ tasks.register('e2eTest', Test) {
     outputs.upToDateWhen { false }
 }
 
+tasks.register('cucumberE2eTest', Test) {
+    description = 'Runs Cucumber end-to-end scenarios against a running service.'
+    group = 'verification'
+    dependsOn tasks.named('e2eClasses')
+    testClassesDirs = sourceSets.e2e.output.classesDirs
+    classpath = sourceSets.e2e.runtimeClasspath
+    useJUnitPlatform { includeEngines('cucumber') }
+    def projectTagFilter = providers.gradleProperty('cucumber.filter.tags').orNull
+    if (projectTagFilter != null) {
+        systemProperty 'cucumber.filter.tags', projectTagFilter
+    }
+    systemProperties System.properties.findAll { key, value -> key.toString().startsWith('cucumber.') }
+    outputs.upToDateWhen { false }
+}
+
 tasks.register('e2e') {
     description = 'Runs end-to-end tests against XQORB_BASE_URI.'
     group = 'verification'
     dependsOn tasks.named('e2eTest')
+    dependsOn tasks.named('cucumberE2eTest')
 }
 
 tasks.register('packageService', Sync) {

@@ -4,24 +4,16 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.xq.jvmtestkit.junit.Xq;
 import com.xq.jvmtestkit.junit.XqTest;
-import com.xq.jvmtestkit.rest.RestApiConfig;
 import com.xq.jvmtestkit.rest.RestRequest;
 import com.xq.jvmtestkit.rest.RestResponse;
-import java.net.URI;
 import java.util.Map;
 import java.util.UUID;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
 @XqTest
 @Tag("e2e")
 class ExerciseBusinessE2ETest {
-    @BeforeEach
-    void configureTestKit() {
-        Xq.rest(RestApiConfig.at(URI.create(baseUri())));
-    }
-
     @Test
     void createsReadsAndListsDistinctExercise() {
         String exerciseName = "Bench Press E2E " + UUID.randomUUID();
@@ -30,12 +22,13 @@ class ExerciseBusinessE2ETest {
 
         Xq.rest().get("/api/v1/exercise-logs/" + logId,
                         RestRequest.builder().build())
-                .should().status(200)
-                .matchJson("{\"id\":%s,\"exerciseName\":\"%s\",\"highestSetVolumeKg\":600.00}"
-                        .formatted(logId, exerciseName));
+                .should().hasStatus(200)
+                .hasJsonPathValue("$.id", Long.valueOf(logId))
+                .hasJsonPathValue("$.exerciseName", exerciseName)
+                .hasJsonPathValue("$.highestSetVolumeKg", 600.00);
 
         RestResponse distinct = Xq.rest().get("/api/v1/exercise-logs/exercises");
-        distinct.should().status(200);
+        distinct.should().hasStatus(200);
         assertTrue(distinct.bodyUtf8().contains("\"exerciseName\":\"%s\"".formatted(exerciseName)));
     }
 
@@ -48,7 +41,7 @@ class ExerciseBusinessE2ETest {
 
         RestResponse response = Xq.rest().get("/api/v1/exercise-logs?exerciseName=" + exerciseName
                 + "&sort=highestSetVolume&limit=2");
-        response.should().status(200);
+        response.should().hasStatus(200);
         String body = response.bodyUtf8();
         assertTrue(body.indexOf("\"highestSetVolumeKg\":640.00")
                 < body.indexOf("\"highestSetVolumeKg\":600.00"));
@@ -63,13 +56,8 @@ class ExerciseBusinessE2ETest {
                                 "setNumber", 1,
                                 "weightKg", weight,
                                 "reps", reps)))).build());
-        response.should().status(201);
+        response.should().hasStatus(201);
         return response;
-    }
-
-    private String baseUri() {
-        return System.getProperty("xqorb.base-uri",
-                System.getenv().getOrDefault("XQORB_BASE_URI", "http://localhost:8080"));
     }
 
     private String jsonString(String json, String field) {
