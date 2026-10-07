@@ -52,7 +52,7 @@ dependencies {
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 
     e2eImplementation 'org.junit.jupiter:junit-jupiter-api'
-    e2eImplementation 'com.xq:jvm-test-kit:3.0.1'
+    e2eImplementation 'com.xq:jvm-test-kit:3.0.3'
     e2eImplementation platform('io.cucumber:cucumber-bom:8.0.2')
     e2eImplementation 'io.cucumber:cucumber-junit-platform-engine'
     e2eImplementation 'io.cucumber:cucumber-spring'
@@ -91,8 +91,9 @@ tasks.register('cucumberE2eTest', Test) {
 }
 
 tasks.register('e2e') {
-    description = 'Runs Cucumber end-to-end scenarios against the configured service URI.'
+    description = 'Runs end-to-end tests against the configured service URI.'
     group = 'verification'
+    dependsOn tasks.named('e2eTest')
     dependsOn tasks.named('cucumberE2eTest')
 }
 
