@@ -11,14 +11,17 @@ Spring Boot microservice and PostgreSQL database for a single-user exercise log 
 
 ## Local development
 
-Prerequisites: Java 21 and Docker with the Compose plugin.
+Prerequisites: Java 21 and Docker (for the GHCR `xq-db` Postgres image used by tests and CI).
 
 ```shell
-./gradlew bootRun
+SPRING_PROFILES_ACTIVE=local ./gradlew bootRun
 ```
 
-Flyway applies the schema from `src/main/resources/db/migration`. The service uses PostgreSQL
-through `compose.yaml`; set `POSTGRES_PORT=0` to let Docker select a free host port.
+The `local` profile supplies localhost datasource defaults for database `xq`, user `exercise_app`,
+and Hikari schema `exercise`. Point that profile at a running Postgres from the pinned
+`xq-db` image in `src/main/resources/xq-db.properties`. Schema migrations are owned by `xq-db`;
+this service does not run Flyway. Integration tests and CI start that same GHCR image via
+Testcontainers / `docker run`.
 
 ## API
 
@@ -40,27 +43,22 @@ there is no exercise catalog table yet.
 ```
 
 The CI workflow runs unit and integration checks, packages the service JAR, starts PostgreSQL,
-checks the packaged service health endpoint, and runs the JVM Test Kit E2E suite. Releases are
-triggered by semantic-version tags such as `v1.0.0` or manually from GitHub Actions; the release
-workflow publishes the GHCR image `ghcr.io/experiencequality/xq-svc-exercice` with an immutable
-commit tag and registry-backed provenance and SBOM attestations.
+checks the packaged service health endpoint, and runs the JVM Test Kit E2E suite. The Publish
+workflow builds and pushes the GHCR image `ghcr.io/experiencequality/xq-svc-exercice` after a
+successful main-branch Test run, or when dispatched manually; it tags the image with an immutable
+`sha-<commit>` tag and `latest`.
 
-To run the CI-equivalent gates locally:
-
-```shell
-./gradlew --no-daemon clean ci
-docker compose up -d --wait
-./gradlew --no-daemon e2e
-docker compose down --volumes --remove-orphans
-```
+To run the CI-equivalent gates locally, run `./gradlew --no-daemon clean ci`, start the pinned
+`xq-db` Postgres image (see `.github/workflows/test.yml`), start the packaged jar with the `e2e`
+profile and datasource overrides, then `./gradlew --no-daemon e2e`.
 
 ## Render and Neon deployment
 
 GitHub Actions runs separate Build, Test, Publish, and Deploy workflows. Publish builds a Linux
- container image with Dockerfile and publishes it to GHCR after successful main-branch Test, or
- for an explicit release tag. Deploy then triggers an image-backed Render service with the immutable
- `sha-<commit>` image tag. The image targets `linux/amd64` and uses bounded JVM memory for Render's
- 512 MB plan. Configure the
+container image with Dockerfile and publishes it to GHCR after successful main-branch Test, or
+when dispatched manually. Deploy then triggers an image-backed Render service with the immutable
+`sha-<commit>` image tag. The image targets `linux/amd64` and uses bounded JVM memory for Render's
+512 MB plan. Configure the
 service health check as `/actuator/health/readiness`; the service binds to Render's `PORT` value
 and uses production profile settings when `SPRING_PROFILES_ACTIVE=production`.
 
@@ -76,18 +74,17 @@ SPRING_PROFILES_ACTIVE=production
 SPRING_DATASOURCE_URL=<Neon main pooled connection URL>
 SPRING_DATASOURCE_USERNAME=<runtime role>
 SPRING_DATASOURCE_PASSWORD=<runtime role password>
-DB_SCHEMA=fitness
+DB_SCHEMA=exercise
 ```
 
 Production uses a 30-second database connection timeout by default to tolerate Neon compute
 cold start. Override `DB_CONNECTION_TIMEOUT_MS` in Render only when measured startup behavior
 requires a different value.
 
-Flyway applies migrations from `src/main/resources/db/migration`. Validate migrations against
-local PostgreSQL in CI, then review production migration impact before deploying to Neon `main`.
-Never enable Flyway clean in production or edit an applied migration.
+Schema migrations are owned by `xq-db`. After cutover, Flyway will not run in this service;
+do not rely on classpath migrations here for production schema changes.
 
-Create GitHub environment `production`, restrict it to `main`, and set repository variable
+Create GitHub environment `production`, restrict it to `main`, and set repository secret
 `RENDER_SERVICE_URL` to the Render service URL. The deployment smoke workflow checks liveness,
 readiness, and the read-only distinct-exercises endpoint. Run it only after Render deploys.
 

@@ -14,7 +14,7 @@ services:
       - key: PORT
         value: "10000"
       - key: DB_SCHEMA
-        value: fitness
+        value: exercise
       - key: SPRING_DATASOURCE_URL
         sync: false
       - key: SPRING_DATASOURCE_USERNAME

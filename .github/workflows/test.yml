@@ -24,8 +24,8 @@ jobs:
     env:
       GITHUB_ACTOR: ${{ github.actor }}
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      POSTGRES_PASSWORD: ci-exercise-service-password
       XQORB_BASE_URI: http://localhost:8080
+      XQ_DB_CONTAINER: xq-db-e2e
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-java@v5
@@ -33,10 +33,27 @@ jobs:
           distribution: temurin
           java-version: '21'
       - uses: gradle/actions/setup-gradle@v6
+      - name: Log in to GHCR
+        run: echo "$GITHUB_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
       - name: Run unit and integration tests
         run: ./gradlew --no-daemon test
-      - name: Start PostgreSQL
-        run: docker compose up -d --wait
+      - name: Start PostgreSQL (xq-db)
+        shell: bash
+        run: |
+          IMAGE=$(grep -E '^xq\.db\.postgres\.image=' src/main/resources/xq-db.properties | cut -d= -f2-)
+          docker run -d --name "$XQ_DB_CONTAINER" \
+            -e POSTGRES_PASSWORD=ci-xq-db-superuser \
+            -p 5432:5432 \
+            "$IMAGE"
+          for attempt in {1..60}; do
+            if docker exec "$XQ_DB_CONTAINER" pg_isready -U exercise_app -d xq; then
+              exit 0
+            fi
+            sleep 2
+          done
+          echo 'Timed out waiting for xq-db Postgres.'
+          docker logs "$XQ_DB_CONTAINER" || true
+          exit 1
       - name: Package test service
         run: ./gradlew --no-daemon bootJar
       - name: Start packaged service
@@ -44,9 +61,10 @@ jobs:
         run: |
           nohup java -jar build/libs/*.jar \
             --spring.profiles.active=e2e \
-            --spring.datasource.url=jdbc:postgresql://localhost:5432/exercise_service \
-            --spring.datasource.username=exercise_service \
-            --spring.datasource.password="$POSTGRES_PASSWORD" \
+            --spring.datasource.url=jdbc:postgresql://localhost:5432/xq \
+            --spring.datasource.username=exercise_app \
+            --spring.datasource.password=exercise_app_test \
+            --spring.datasource.hikari.schema=exercise \
             > build/application.log 2>&1 &
           echo $! > build/application.pid
       - name: Wait for service health
@@ -81,4 +99,6 @@ jobs:
           if [[ -f build/application.pid ]]; then kill "$(<build/application.pid)" 2>/dev/null || true; fi
       - name: Stop PostgreSQL
         if: always()
-        run: docker compose down --volumes --remove-orphans
+        run: |
+          docker stop "$XQ_DB_CONTAINER" 2>/dev/null || true
+          docker rm "$XQ_DB_CONTAINER" 2>/dev/null || true
