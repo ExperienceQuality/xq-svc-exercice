@@ -1,0 +1,9 @@
+# Local/dev defaults. Activate with SPRING_PROFILES_ACTIVE=local.
+# Point at a running xq-db Postgres (GHCR image pinned in xq-db.properties).
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/xq
+    username: exercise_app
+    password: exercise_app_test
+    hikari:
+      schema: exercise

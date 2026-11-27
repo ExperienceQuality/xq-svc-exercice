@@ -6,13 +6,18 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.UncheckedIOException;
+import java.util.Properties;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
@@ -25,10 +30,30 @@ import org.testcontainers.utility.DockerImageName;
 @Testcontainers
 @ActiveProfiles("integration")
 class ExerciseApiIntegrationTests {
+    private static final String XQ_DB_IMAGE = loadXqDbImage();
+    private static final String APP_USER = "exercise_app";
+    private static final String APP_PASSWORD = "exercise_app_test";
+    private static final String APP_DATABASE = "xq";
+
     @Container
-    @ServiceConnection
     static final PostgreSQLContainer postgres = new PostgreSQLContainer(
-            DockerImageName.parse("postgres:18.6-bookworm"));
+                    DockerImageName.parse(XQ_DB_IMAGE).asCompatibleSubstituteFor("postgres"))
+            // Image init creates role exercise_app; POSTGRES_USER=exercise_app would conflict.
+            // Keep Testcontainers default bootstrap user; withPassword sets POSTGRES_PASSWORD.
+            .withDatabaseName(APP_DATABASE)
+            .withPassword(APP_PASSWORD)
+            .withEnv("POSTGRES_PASSWORD", APP_PASSWORD);
+
+    @DynamicPropertySource
+    static void datasourceProperties(DynamicPropertyRegistry registry) {
+        registry.add(
+                "spring.datasource.url",
+                () -> "jdbc:postgresql://%s:%d/%s"
+                        .formatted(postgres.getHost(), postgres.getFirstMappedPort(), APP_DATABASE));
+        registry.add("spring.datasource.username", () -> APP_USER);
+        registry.add("spring.datasource.password", () -> APP_PASSWORD);
+        registry.add("spring.datasource.hikari.schema", () -> "exercise");
+    }
 
     @Autowired WebApplicationContext context;
     @Autowired JdbcClient jdbc;
@@ -37,7 +62,9 @@ class ExerciseApiIntegrationTests {
     @BeforeEach
     void cleanDatabase() {
         mvc = MockMvcBuilders.webAppContextSetup(context).build();
-        jdbc.sql("truncate exercise_sets, exercise_logs restart identity cascade").update();
+        // exercise_app has DELETE, not TRUNCATE, on xq-db tables.
+        jdbc.sql("delete from exercise_sets").update();
+        jdbc.sql("delete from exercise_logs").update();
     }
 
     @Test
@@ -103,5 +130,22 @@ class ExerciseApiIntegrationTests {
                                 ]}
                                 """.formatted(name, weight, reps)))
                 .andExpect(status().isCreated());
+    }
+
+    private static String loadXqDbImage() {
+        try (InputStream in = ExerciseApiIntegrationTests.class.getResourceAsStream("/xq-db.properties")) {
+            if (in == null) {
+                throw new IllegalStateException("classpath:/xq-db.properties not found");
+            }
+            Properties properties = new Properties();
+            properties.load(in);
+            String image = properties.getProperty("xq.db.postgres.image");
+            if (image == null || image.isBlank()) {
+                throw new IllegalStateException("xq.db.postgres.image missing from xq-db.properties");
+            }
+            return image.trim();
+        } catch (IOException ex) {
+            throw new UncheckedIOException("Failed to load xq-db.properties", ex);
+        }
     }
 }

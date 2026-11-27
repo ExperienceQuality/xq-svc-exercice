@@ -1,4 +1,4 @@
 spring:
-  docker:
-    compose:
-      enabled: false
+  datasource:
+    hikari:
+      schema: exercise
